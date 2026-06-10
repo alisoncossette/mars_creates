@@ -18,6 +18,7 @@ class Post:
     quote: str
     alt_text: str
     event: str
+    handle: str = ""        # the guest's @ to tag
 
 
 def enhance(frame_jpeg: bytes, settings: Settings) -> bytes:
@@ -67,20 +68,23 @@ def enhance(frame_jpeg: bytes, settings: Settings) -> bytes:
     return frame_jpeg
 
 
-def compose_post(transcript: Transcript, frame_jpeg: bytes, event: EventContext, settings: Settings) -> Post:
+def compose_post(transcript: Transcript, frame_jpeg: bytes, event: EventContext,
+                 settings: Settings, handle: str = "") -> Post:
     image = enhance(frame_jpeg, settings)
 
     quote = _best_quote(transcript, settings)
     caption = _caption(transcript, quote, event, settings)
+    tag = f" @{handle.lstrip('@')}" if handle else ""
     sponsors = " ".join("#" + s.replace(" ", "") for s in event.sponsors)
-    caption = f"{caption}\n\n{sponsors}".strip()
+    caption = f"{caption}{tag}\n\n{sponsors}".strip()
 
     return Post(
         image=image,
         caption=caption,
         quote=quote,
-        alt_text=f"Robot street interview at {event.name or 'an event'}.",
+        alt_text=f"Robot selfie at {event.name or 'an event'}.",
         event=event.name or "",
+        handle=handle.lstrip("@") if handle else "",
     )
 
 

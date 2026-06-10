@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""publish_interview — Innate integration skill.
+"""publish_interview — Innate integration skill (posts a photo + text to gallery + X).
 
-Matches the real on-robot convention from ~/skills/send_picture_via_email.py:
-  from brain_client.skills.types import Skill, SkillResult
-  __init__(self, logger) | @property name | guidelines() | execute(...) -> (msg, SkillResult) | cancel()
+Matches the real on-robot convention (innate-os/skills/send_email.py, send_picture_via_email.py):
+  from brain_client.skill_types import Skill, SkillResult
+  __init__(self, logger) -> super().__init__(logger) | @property name | guidelines()
+  execute(...) -> (message, SkillResult) | cancel()
 
-The brain calls this AFTER a consented interview, passing the guest's best `quote`. It grabs a
-camera frame (via your ~/mars_camera_feed.py --once, so no in-process rclpy conflicts), enhances
-it with Magnific, writes a caption, and posts to the gallery + X.
+Used by both the Phase-0 selfie agent (working_on + handle) and the Phase-1 interviewer (quote).
+Grabs a frame if no image_path is given (falls back to the main camera via ~/mars_camera_feed.py).
 
-DEPLOY (on the robot):
-  • drop this file in ~/skills/  (auto-discovered as local/publish_interview)
-  • copy the mars/ lib to ~/mars_lib/   (this file adds it to sys.path)
+DEPLOY:
+  • drop in ~/skills/  (auto-discovered as local/publish_interview)
+  • copy the mars/ lib to ~/mars_lib/  (this file adds it to sys.path)
   • keys via env / .env: MAGNIFIC_API_KEY, ANTHROPIC_API_KEY, X_*, AKAMAI_GALLERY_*
     (anything missing -> that step degrades to mock, skill still succeeds)
 """
@@ -21,20 +21,21 @@ import os
 import subprocess
 import sys
 
-from brain_client.skills.types import Skill, SkillResult
+from brain_client.skill_types import Skill, SkillResult
 
 # Make the mars lib importable (copy mars/ -> ~/mars_lib/ on the robot).
 sys.path.insert(0, os.path.expanduser("~/mars_lib"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-CAM_SCRIPT = os.path.expanduser("~/mars_camera_feed.py")  # your working camera grabber
+CAM_SCRIPT = os.path.expanduser("~/mars_camera_feed.py")
+MAIN_CAM_TOPIC = "/mars/main_camera/left/image_raw/compressed"
 
 
 class PublishInterview(Skill):
-    """Turn a just-finished, consented interview into a published social post."""
+    """Turn a consented photo + what the guest said into a published, tagged post."""
 
     def __init__(self, logger):
-        self.logger = logger
+        super().__init__(logger)
 
     @property
     def name(self):
@@ -42,15 +43,15 @@ class PublishInterview(Skill):
 
     def guidelines(self):
         return (
-            "Create and post a social card from the interview you just finished. Provide "
-            "`quote` (the single most postable thing the guest said) and a short `summary`. "
-            "Optionally pass `image_path` to a photo already captured; otherwise a camera frame "
-            "is grabbed automatically. ONLY call this after the guest agreed out loud to be "
-            "posted. It enhances the photo with Magnific, writes a caption, and posts to the "
-            "gallery and X."
+            "Post a photo to the gallery and X. Provide `working_on` (one line about what the "
+            "guest is working on) and `handle` (their @, to tag them). For a full interview pass "
+            "`quote` instead. Optionally `image_path` (e.g. /tmp/mars_selfie.jpg from take_selfie); "
+            "otherwise a camera frame is grabbed. ONLY call this after the guest agreed out loud "
+            "to be posted. It enhances the photo with Magnific, writes a caption, posts + tags."
         )
 
-    def execute(self, quote: str = "", summary: str = "", image_path: str = None):
+    def execute(self, working_on: str = "", quote: str = "", handle: str = "",
+                summary: str = "", image_path: str = None):
         try:
             from mars.config import EventContext, Settings
             from mars.content import compose_post
@@ -61,12 +62,12 @@ class PublishInterview(Skill):
             return f"publish lib not found: {e}", SkillResult.FAILURE
 
         frame = self._load_or_capture(image_path)
-        settings = Settings()
-        event = EventContext()
-        post = compose_post(Transcript(turns=[("guest", quote or summary)]), frame, event, settings)
+        said = working_on or quote or summary
+        post = compose_post(Transcript(turns=[("guest", said)]),
+                            frame, EventContext(), Settings(), handle=handle)
 
         results = []
-        for pub in build_publishers(settings):
+        for pub in build_publishers(Settings()):
             try:
                 results.append(f"{pub.name}:{pub.publish(post)}")
             except Exception as e:  # a posting failure must not crash the skill
@@ -82,14 +83,10 @@ class PublishInterview(Skill):
         if image_path and os.path.exists(image_path):
             with open(image_path, "rb") as f:
                 return f.read()
-        return self._capture_frame()
-
-    def _capture_frame(self) -> bytes:
-        """Grab one JPEG by running your ~/mars_camera_feed.py --once in a subprocess.
-        Isolated process => no clash with the brain's running rclpy executor."""
-        out = "/tmp/mars_interview.jpg"
+        out = "/tmp/mars_publish.jpg"
         try:
-            subprocess.run(["python3", CAM_SCRIPT, "--once", "--out", out], timeout=15, check=False)
+            subprocess.run(["python3", CAM_SCRIPT, "--once", "--topic", MAIN_CAM_TOPIC, "--out", out],
+                           timeout=15, check=False)
             if os.path.exists(out):
                 with open(out, "rb") as f:
                     return f.read()
