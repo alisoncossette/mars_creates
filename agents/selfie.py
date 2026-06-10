@@ -4,7 +4,11 @@ The simplest, most reliable demo: approach -> consent -> ask their @ + what they
 -> arm selfie -> post + tag. No interview Q&A, no audio recording. A strict subset of the
 interviewer, so it can't fail in more ways. Deploy: drop in ~/agents/.
 """
+import os
+import sys
 from typing import List
+
+sys.path.insert(0, os.path.expanduser("~/mars_lib"))  # make the mars lib importable on the robot
 
 from brain_client.agent_types import Agent
 

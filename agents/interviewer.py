@@ -7,7 +7,11 @@ skills in ~/skills/ (publish_interview, capture_image) and the `mars` lib import
 The cloud brain runs the conversation, voice (mic input + TTS), and the loop. This file is
 just personality + which skills it may call. Pattern matches rubysredrover/.../ruby_assistant_from_mars.py.
 """
+import os
+import sys
 from typing import List
+
+sys.path.insert(0, os.path.expanduser("~/mars_lib"))  # make the mars lib importable on the robot
 
 from brain_client.agent_types import Agent
 
