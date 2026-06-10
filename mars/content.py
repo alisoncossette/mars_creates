@@ -75,8 +75,9 @@ def compose_post(transcript: Transcript, frame_jpeg: bytes, event: EventContext,
     quote = _best_quote(transcript, settings)
     caption = _caption(transcript, quote, event, settings)
     tag = f" @{handle.lstrip('@')}" if handle else ""
-    sponsors = " ".join("#" + s.replace(" ", "") for s in event.sponsors)
-    caption = f"{caption}{tag}\n\n{sponsors}".strip()
+    # Fixed tags on every post (host + sponsors), preceded by the debut framing.
+    always = " ".join("@" + h.lstrip("@") for h in settings.always_tag)
+    caption = f"{caption}{tag}\n\n{settings.debut_note}\n{always}".strip()
 
     return Post(
         image=image,

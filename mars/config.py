@@ -60,6 +60,15 @@ class Settings:
     live: bool = _bool("MARS_LIVE", False)
     max_questions: int = int(os.getenv("MARS_MAX_QUESTIONS", "4"))
 
+    # Tags on EVERY post (host + sponsors) and the debut framing.
+    always_tag: list[str] = field(default_factory=lambda: [
+        h.strip() for h in os.getenv("MARS_ALWAYS_TAG", "@hackersquadsf,@Akamai,@Magnific_AI").split(",")
+        if h.strip()
+    ])
+    debut_note: str = os.getenv(
+        "MARS_DEBUT_NOTE", "🤖 My very first post — shot and posted all by myself. (Yes, it's a selfie.)"
+    )
+
     @property
     def mock_llm(self) -> bool:
         return not self.anthropic_api_key
