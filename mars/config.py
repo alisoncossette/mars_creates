@@ -29,8 +29,9 @@ class Settings:
     deepgram_api_key: str = os.getenv("DEEPGRAM_API_KEY", "")
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
 
-    freepik_api_key: str = os.getenv("FREEPIK_API_KEY", "")
-    magnific_op: str = os.getenv("MARS_MAGNIFIC_OP", "upscale")
+    magnific_api_key: str = os.getenv("MAGNIFIC_API_KEY", "")
+    magnific_base_url: str = os.getenv("MAGNIFIC_BASE_URL", "https://api.magnific.com")
+    magnific_scale: int = int(os.getenv("MARS_MAGNIFIC_SCALE", "2"))
 
     gallery_base_url: str = os.getenv("AKAMAI_GALLERY_BASE_URL", "")
     gallery_upload_url: str = os.getenv("AKAMAI_GALLERY_UPLOAD_URL", "")

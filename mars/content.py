@@ -21,12 +21,49 @@ class Post:
 
 
 def enhance(frame_jpeg: bytes, settings: Settings) -> bytes:
-    """Magnific (via Freepik API): upscale / style / relight the chosen frame into a hero image."""
-    if not settings.freepik_api_key:
-        log.info("[content] magnific MOCK (no FREEPIK_API_KEY) -> passthrough %d bytes", len(frame_jpeg))
+    """Magnific Creative Upscaler (api.magnific.com): make the camera grab post-worthy.
+    Async submit -> poll. Falls back to the original frame on ANY failure, so a post always
+    goes out. Exact field/header names are best-guess from the docs — confirm with one real
+    call once the key is in; the graceful fallback makes a wrong guess harmless (posts raw photo).
+    """
+    if not settings.magnific_api_key or not frame_jpeg:
+        log.info("[content] magnific MOCK (no key / empty frame) -> passthrough %d bytes", len(frame_jpeg))
         return frame_jpeg
-    # TODO(magnific): POST frame to Freepik/Magnific API with op=settings.magnific_op, poll, return result bytes.
-    log.info("[content] magnific %s", settings.magnific_op)
+    try:
+        import base64
+        import time
+        import httpx
+
+        base = settings.magnific_base_url.rstrip("/")
+        headers = {"x-magnific-api-key": settings.magnific_api_key}  # TODO confirm header name
+        b64 = base64.b64encode(frame_jpeg).decode()
+
+        submit = httpx.post(
+            f"{base}/v1/ai/image-upscaler",
+            headers=headers,
+            json={"image": f"data:image/jpeg;base64,{b64}", "scale_factor": settings.magnific_scale},
+            timeout=30,
+        )
+        submit.raise_for_status()
+        body = submit.json()
+        task_id = body.get("id") or body.get("task_id") or body.get("data", {}).get("id")
+
+        for _ in range(40):  # ~80s max
+            time.sleep(2)
+            st = httpx.get(f"{base}/v1/ai/image-upscaler/{task_id}", headers=headers, timeout=30).json()
+            status = (st.get("status") or st.get("state") or "").lower()
+            if status in {"completed", "success", "succeeded", "done", "finished"}:
+                url = st.get("result") or st.get("image_url") or st.get("output", {}).get("url") \
+                    or (st.get("images") or [{}])[0].get("url")
+                if url:
+                    log.info("[content] magnific upscaled -> downloading result")
+                    return httpx.get(url, timeout=60).content
+                break
+            if status in {"failed", "error", "cancelled"}:
+                break
+        log.warning("[content] magnific didn't finish; using original frame")
+    except Exception as e:
+        log.warning("[content] magnific failed (%s); using original frame", e)
     return frame_jpeg
 
 
