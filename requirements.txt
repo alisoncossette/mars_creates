@@ -1,0 +1,24 @@
+# Core
+anthropic>=0.40.0          # interview brain + captions (Claude)
+python-dotenv>=1.0.1
+pydantic>=2.7.0
+httpx>=0.27.0
+
+# Voice (onboard mic + speaker)
+# pick one TTS + one STT; stubs work without these installed
+# elevenlabs>=1.0.0        # TTS
+# openai>=1.40.0           # TTS/STT alt
+# deepgram-sdk>=3.0.0      # STT (streaming)
+# sounddevice>=0.4.6       # mic capture / speaker playback
+# numpy>=1.26
+
+# Media (record both cams + audio; optional live RTMP)
+# opencv-python>=4.9       # camera frames
+# ffmpeg-python>=0.2.0     # mux + RTMP push to Akamai
+
+# Publish
+# tweepy>=4.14             # X / Twitter
+
+# Pipeline service (optional, runs on Akamai Cloud / Linode)
+# fastapi>=0.110
+# uvicorn>=0.29
