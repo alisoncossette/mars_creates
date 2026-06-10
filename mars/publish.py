@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import time
 from typing import Protocol
 
@@ -27,7 +28,7 @@ class GalleryPublisher:
         self.s = settings
 
     def publish(self, post: Post) -> str:
-        slug = f"post-{int(time.time())}"
+        slug = re.sub(r"[^a-z0-9_]+", "", (post.handle or "").lstrip("@").lower()) or f"post-{int(time.time())}"
         meta = {"caption": post.caption, "quote": post.quote, "handle": post.handle,
                 "alt": post.alt_text, "event": post.event}
 
