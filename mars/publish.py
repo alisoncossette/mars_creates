@@ -19,7 +19,8 @@ class Publisher(Protocol):
 
 
 class GalleryPublisher:
-    """Uploads the post to the Akamai-fronted gallery. Mock: writes to ./out and returns a path."""
+    """Pushes the post to Linode Object Storage (S3), served via Akamai CDN.
+    Mock (no S3 configured): writes to ./out and returns a local path."""
     name = "gallery"
 
     def __init__(self, settings: Settings):
@@ -27,21 +28,37 @@ class GalleryPublisher:
 
     def publish(self, post: Post) -> str:
         slug = f"post-{int(time.time())}"
-        payload = {"caption": post.caption, "quote": post.quote, "alt": post.alt_text, "event": post.event}
-        if not self.s.gallery_upload_url:
+        meta = {"caption": post.caption, "quote": post.quote, "handle": post.handle,
+                "alt": post.alt_text, "event": post.event}
+
+        if not self.s.s3_configured:
             os.makedirs("out", exist_ok=True)
             with open(f"out/{slug}.json", "w", encoding="utf-8") as f:
-                json.dump(payload, f, indent=2)
+                json.dump(meta, f, indent=2)
             if post.image:
                 with open(f"out/{slug}.jpg", "wb") as f:
                     f.write(post.image)
-            log.info("[gallery] MOCK wrote out/%s.*", slug)
+            log.info("[gallery] MOCK wrote out/%s.* (set LINODE_S3_* to push to Akamai)", slug)
             return f"out/{slug}.json"
-        # TODO(akamai): PUT image + payload to gallery origin; Akamai CDN serves gallery_base_url/<slug>.
-        import httpx  # lazy — only needed for real uploads
-        files = {"image": ("hero.jpg", post.image, "image/jpeg")}
-        httpx.post(self.s.gallery_upload_url, data={"meta": json.dumps(payload)}, files=files, timeout=30)
-        return f"{self.s.gallery_base_url.rstrip('/')}/{slug}"
+
+        # Real: PUT to Linode Object Storage; Akamai CDN fronts it.
+        import boto3  # lazy — only needed for real uploads
+        s3 = boto3.client(
+            "s3",
+            endpoint_url=self.s.s3_endpoint,
+            region_name=self.s.s3_region,
+            aws_access_key_id=self.s.s3_key,
+            aws_secret_access_key=self.s.s3_secret,
+        )
+        img_key = f"{slug}.jpg"
+        s3.put_object(Bucket=self.s.s3_bucket, Key=img_key, Body=post.image or b"",
+                      ContentType="image/jpeg", ACL="public-read")
+        s3.put_object(Bucket=self.s.s3_bucket, Key=f"{slug}.json",
+                      Body=json.dumps(meta).encode(), ContentType="application/json", ACL="public-read")
+        log.info("[gallery] pushed %s to s3://%s", img_key, self.s.s3_bucket)
+        if self.s.cdn_base_url:
+            return f"{self.s.cdn_base_url.rstrip('/')}/{img_key}"
+        return f"{self.s.s3_endpoint.rstrip('/')}/{self.s.s3_bucket}/{img_key}"
 
 
 class XPublisher:

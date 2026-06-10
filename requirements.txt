@@ -18,6 +18,7 @@ httpx>=0.27.0
 
 # Publish
 # tweepy>=4.14             # X / Twitter
+# boto3>=1.34              # Linode Object Storage (S3) push -> Akamai CDN
 
 # Pipeline service (optional, runs on Akamai Cloud / Linode)
 # fastapi>=0.110

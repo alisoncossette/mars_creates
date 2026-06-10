@@ -33,10 +33,19 @@ class Settings:
     magnific_base_url: str = os.getenv("MAGNIFIC_BASE_URL", "https://api.magnific.com")
     magnific_scale: int = int(os.getenv("MARS_MAGNIFIC_SCALE", "2"))
 
-    gallery_base_url: str = os.getenv("AKAMAI_GALLERY_BASE_URL", "")
-    gallery_upload_url: str = os.getenv("AKAMAI_GALLERY_UPLOAD_URL", "")
+    # Akamai Cloud = Linode Object Storage (S3-compatible), fronted by Akamai CDN
+    s3_endpoint: str = os.getenv("LINODE_S3_ENDPOINT", "")        # e.g. https://us-east-1.linodeobjects.com
+    s3_region: str = os.getenv("LINODE_S3_REGION", "us-east-1")
+    s3_bucket: str = os.getenv("LINODE_S3_BUCKET", "")
+    s3_key: str = os.getenv("LINODE_S3_ACCESS_KEY", "")
+    s3_secret: str = os.getenv("LINODE_S3_SECRET_KEY", "")
+    cdn_base_url: str = os.getenv("AKAMAI_CDN_BASE_URL", "")      # optional custom Akamai domain
     rtmp_ingest_url: str = os.getenv("AKAMAI_RTMP_INGEST_URL", "")
     stream_key: str = os.getenv("AKAMAI_STREAM_KEY", "")
+
+    @property
+    def s3_configured(self) -> bool:
+        return all([self.s3_endpoint, self.s3_bucket, self.s3_key, self.s3_secret])
 
     publish_gallery: bool = _bool("MARS_PUBLISH_GALLERY", True)
     publish_x: bool = _bool("MARS_PUBLISH_X", True)
