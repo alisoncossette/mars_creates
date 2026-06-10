@@ -30,6 +30,7 @@ env/
 data/
 recordings/
 *.bag
+out/
 
 # --- OS / editor ---
 .DS_Store
