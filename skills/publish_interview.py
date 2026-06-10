@@ -43,11 +43,10 @@ class PublishInterview(Skill):
 
     def guidelines(self):
         return (
-            "Post a photo to the gallery and X. Provide `working_on` (one line about what the "
-            "guest is working on) and `handle` (their @, to tag them). For a full interview pass "
-            "`quote` instead. Optionally `image_path` (e.g. /tmp/mars_selfie.jpg from take_selfie); "
-            "otherwise a camera frame is grabbed. ONLY call this after the guest agreed out loud "
-            "to be posted. It enhances the photo with Magnific, writes a caption, posts + tags."
+            "Post to X (and the gallery if set up). Provide `working_on` (one line about what the "
+            "guest is working on) and `handle` (their @, to tag them). It generates an image from "
+            "`working_on` with Magnific, writes a caption, and posts + tags them. ONLY call this "
+            "after the guest agreed out loud to be posted."
         )
 
     def execute(self, working_on: str = "", quote: str = "", handle: str = "",
@@ -61,10 +60,11 @@ class PublishInterview(Skill):
             self.logger.error(f"[publish_interview] mars lib not importable (copy mars/ -> ~/mars_lib): {e}")
             return f"publish lib not found: {e}", SkillResult.FAILURE
 
-        frame = self._load_or_capture(image_path)
         said = working_on or quote or summary
+        settings = Settings()
+        frame = self._get_image(image_path, said, settings)
         post = compose_post(Transcript(turns=[("guest", said)]),
-                            frame, EventContext(), Settings(), handle=handle)
+                            frame, EventContext(), settings, handle=handle)
 
         results = []
         for pub in build_publishers(Settings()):
@@ -79,11 +79,16 @@ class PublishInterview(Skill):
         self.logger.info(f"\033[92m[publish_interview] {msg}\033[0m")
         return msg, SkillResult.SUCCESS
 
-    def _load_or_capture(self, image_path: str | None) -> bytes:
-        # Text-only mode: use a photo only if one was explicitly passed; otherwise post text.
+    def _get_image(self, image_path: str | None, said: str, settings) -> bytes:
+        # Passed photo wins; else generate one from what Mars reports (Magnific); else text-only.
         if image_path and os.path.exists(image_path):
             with open(image_path, "rb") as f:
                 return f.read()
+        if settings.magnific_api_key and said:
+            from mars.content import generate_image
+            prompt = (f"A bold, vibrant, social-media-ready illustration of: {said}. "
+                      "Clean, modern, eye-catching, no text or words in the image.")
+            return generate_image(prompt, settings)
         return b""
 
     def cancel(self):

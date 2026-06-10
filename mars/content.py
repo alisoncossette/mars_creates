@@ -68,6 +68,42 @@ def enhance(frame_jpeg: bytes, settings: Settings) -> bytes:
     return frame_jpeg
 
 
+def generate_image(prompt: str, settings: Settings) -> bytes:
+    """Magnific Mystic text-to-image: generate an image from a prompt (async submit -> poll).
+    Returns image bytes, or b'' on any failure (graceful -> text-only post)."""
+    if not settings.magnific_api_key or not prompt:
+        return b""
+    try:
+        import time
+        import httpx
+
+        base = settings.magnific_base_url.rstrip("/")
+        headers = {"x-magnific-api-key": settings.magnific_api_key}
+        body = {"prompt": prompt, "resolution": "1k", "aspect_ratio": "square_1_1"}
+        sub = httpx.post(f"{base}/v1/ai/mystic", headers=headers, json=body, timeout=30)
+        sub.raise_for_status()
+        task_id = (sub.json().get("data") or {}).get("task_id")
+        if not task_id:
+            return b""
+        for _ in range(60):  # ~2 min
+            time.sleep(2)
+            data = (httpx.get(f"{base}/v1/ai/mystic/{task_id}", headers=headers, timeout=30).json().get("data") or {})
+            status = (data.get("status") or "").upper()
+            if status in {"COMPLETED", "SUCCESS", "DONE"}:
+                urls = data.get("generated") or []
+                if urls:
+                    log.info("[content] magnific generated image -> downloading")
+                    return httpx.get(urls[0], timeout=60).content
+                return b""
+            if status in {"FAILED", "ERROR"}:
+                log.warning("[content] magnific generation failed (status)")
+                return b""
+        log.warning("[content] magnific generation timed out")
+    except Exception as e:
+        log.warning("[content] magnific generate failed (%s); text-only", e)
+    return b""
+
+
 def compose_post(transcript: Transcript, frame_jpeg: bytes, event: EventContext,
                  settings: Settings, handle: str = "") -> Post:
     image = enhance(frame_jpeg, settings)
