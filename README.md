@@ -1,42 +1,58 @@
 # akamai-hack
 
-> Self-improving embodied agent — a small floor robot that knows the limits of its body,
-> writes itself a new agent when it hits a wall, and **won't take an irreversible action on an unverified guess.**
+> **The robot as an autonomous content creator.** The Innate **Mars** robot streams both cameras,
+> turns its point-of-view into striking AI-enhanced content with **Magnific**, and **posts it live** —
+> delivered on **Akamai**.
 
-*(Working concept — swap freely if this repo is for a different build.)*
+## Concept
 
-## The idea
+Mars roams with two cameras. A pipeline pulls frames, runs them through Magnific to create
+gallery-grade content, writes a caption from what the robot is actually seeing, and publishes —
+all without a human in the loop. Content, created and posted *directly from the robot.*
 
-The robot's day job is **picking up litter**. The real build is making it *smart about what it
-picks up* and able to **build itself a new agent, live, when it hits something it can't handle.**
+## Architecture (data flow)
 
-Differentiator: most robot demos make the robot *act*. This one knows when an action is
-**irreversible** (throwing something away) and verifies before it commits — and when it hits its
-limits, it generates the skill to do the right thing.
+```
+[ Mars robot · 2 cameras ]
+        │  capture frames (both feeds)
+        ▼
+[ capture/stream layer ]  ──(live feed)──►  Akamai media streaming (optional live view)
+        │  pick / composite best frame(s)
+        ▼
+[ pipeline service on Akamai Cloud (Linode) ]
+        ├─► Magnific API  →  enhance / upscale / restyle into content
+        ├─► caption (LLM)  →  text from the robot's view
+        └─► post  →  X / web gallery (gallery served via Akamai CDN)
+        ▼
+[ published content ]  ──delivered by──►  Akamai CDN
+```
 
-## Core loop
+## Where each sponsor slots in
 
-1. **Perceive** — camera spots an object on the floor.
-2. **Verify before acting** — trash, or a dropped valuable? Cup/wrapper → bin it. Phone/wallet/badge → stop.
-3. **Gap detection** — "beyond my body + my skills → I need a new agent: find the owner."
-4. **Build it live** — Claude Code scaffolds a `find-owner` agent (read badge / look up attendee / route to lost-and-found).
-5. **Verify the match** — right owner, real contact, not a hallucinated guess.
-6. **Act + self-update** — return the item; the new agent joins the roster permanently.
+- **Akamai** — host the pipeline service on **Akamai Cloud (Linode)**; deliver the generated
+  content (and an optional live dual-cam feed) via Akamai's **media streaming / CDN**.
+- **Magnific** (now via the Freepik API) — the *create* step: upscale / enhance / reimagine
+  raw robot frames into polished content.
 
-**Live demo:** plant a phone in a pile of litter → robot picks the wrappers, catches that the phone
-*isn't* trash, builds a find-owner agent on the spot, and returns it — on stage.
+## Pipeline steps
+
+1. **Capture** both camera feeds from Mars.
+2. **Curate** — pick the frame(s) worth posting (a quality gate, not "post everything").
+3. **Create** — Magnific enhances/transforms the chosen frame into content.
+4. **Caption** — LLM writes copy from what the robot saw.
+5. **Post** — publish to the target; Akamai delivers it.
+
+## Open questions (resolve first)
+
+- [ ] **Innate Mars SDK** — how are the *two* cameras exposed? (frame grab API / RTSP / ROS topic?)
+- [ ] **Akamai** — which resource does the hack provide? (Linode compute credits / media streaming / EdgeWorkers?)
+- [ ] **Magnific / Freepik API** — key access + which operation (upscale vs. style/relight)?
+- [ ] **Post target** — X API, or a self-hosted web gallery served over Akamai CDN?
 
 ## Stack
 
-- Robot: Innate **Mars** (small floor robot, single small arm)
-- Agent generation: **Claude Code**
-- _TODO: search / voice / verify layer / orchestration — fill in_
-
-## Setup
-
-```
-# TODO
-```
+- Robot + pipeline: **Python** (likely — robot SDKs lean that way) · _confirm_
+- Service: FastAPI on Linode · _TODO_
 
 ## Notes
 
