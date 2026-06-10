@@ -80,27 +80,10 @@ class PublishInterview(Skill):
         return msg, SkillResult.SUCCESS
 
     def _load_or_capture(self, image_path: str | None) -> bytes:
+        # Text-only mode: use a photo only if one was explicitly passed; otherwise post text.
         if image_path and os.path.exists(image_path):
             with open(image_path, "rb") as f:
                 return f.read()
-        # fallback: grab directly from the OAK camera (/dev/video5), bypassing ROS/calibration
-        try:
-            import cv2
-            cap = cv2.VideoCapture(5)
-            for _ in range(8):
-                cap.read()
-            ok, frame = cap.read()
-            cap.release()
-            if ok and frame is not None:
-                left = frame[:, : frame.shape[1] // 2]
-                portrait = cv2.rotate(left, cv2.ROTATE_90_CLOCKWISE)
-                out = "/tmp/mars_publish.jpg"
-                cv2.imwrite(out, portrait)
-                with open(out, "rb") as f:
-                    return f.read()
-        except Exception as e:
-            self.logger.warning(f"[publish_interview] camera capture failed: {e}")
-        self.logger.warning("[publish_interview] no frame; posting without photo")
         return b""
 
     def cancel(self):
