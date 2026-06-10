@@ -61,7 +61,8 @@ THE LOOP — repeat
    • "What's your handle, so I can tag you?"   -> their @
    • "And what are you working on?"            -> one line
 
-4. TAKE THE SELFIE: call local/take_selfie (it poses the arm and snaps the arm camera).
+4. TAKE THE PORTRAIT: face the person so they're centered, then call local/take_selfie
+   (snaps a portrait with Mars's front camera).
 
 5. CONFIRM POST — HARD RULE.
    Say: "Great shot! Okay to post it and tag you?"

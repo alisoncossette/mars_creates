@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""take_selfie — grab a selfie from the arm's wrist camera at its CURRENT pose.
+"""take_selfie — capture a portrait of the guest from Mars's FRONT (main) camera.
 
-The operator poses the arm once at the best selfie angle (torque holds it), so this skill does
-NOT move the arm — it just captures the wrist (arm) camera and saves it for publish_interview.
-Uses the proper RobotState API (same wrist image record_position uses), so no ROS/serial access.
+Mars faces the person and snaps a portrait with the primary camera (no arm involved).
+Uses the proper RobotState API (same mechanism record_position uses for its wrist image),
+so no ROS-topic/QoS or serial access. Saves to /tmp/mars_selfie.jpg for publish_interview.
 
 Deploy: ~/skills/take_selfie.py (auto-discovered as local/take_selfie).
 """
@@ -13,13 +13,13 @@ import base64
 
 from brain_client.skill_types import RobotState, RobotStateType, Skill, SkillResult
 
-SELFIE_OUT = "/tmp/mars_selfie.jpg"
+PORTRAIT_OUT = "/tmp/mars_selfie.jpg"
 
 
 class TakeSelfie(Skill):
-    """Snap a selfie from the arm's wrist camera (current pose) and save it for publishing."""
+    """Snap a portrait of the guest from the front (main) camera and save it for publishing."""
 
-    image = RobotState(RobotStateType.LAST_WRIST_CAMERA_IMAGE_B64)
+    image = RobotState(RobotStateType.LAST_MAIN_CAMERA_IMAGE_B64)
 
     def __init__(self, logger):
         super().__init__(logger)
@@ -30,21 +30,21 @@ class TakeSelfie(Skill):
 
     def guidelines(self):
         return (
-            "Take a selfie with the arm's wrist camera from its current pose (the arm is already "
-            f"posed for selfies). Saves the photo to {SELFIE_OUT} — call this right before "
+            "Take a portrait of the person using Mars's front (main) camera. Face them so they're "
+            f"centered first. Saves the photo to {PORTRAIT_OUT} — call this right before "
             "publish_interview and pass that path as image_path. Use after the guest said yes."
         )
 
     def execute(self):
         if not self.image:
-            return "No wrist camera image available yet.", SkillResult.FAILURE
+            return "No main camera image available yet.", SkillResult.FAILURE
         try:
-            with open(SELFIE_OUT, "wb") as f:
+            with open(PORTRAIT_OUT, "wb") as f:
                 f.write(base64.b64decode(self.image))
         except Exception as e:
-            return f"Selfie save failed: {e}", SkillResult.FAILURE
-        self.logger.info(f"[take_selfie] saved {SELFIE_OUT}")
-        return f"Selfie saved to {SELFIE_OUT}", SkillResult.SUCCESS
+            return f"Portrait save failed: {e}", SkillResult.FAILURE
+        self.logger.info(f"[take_selfie] saved portrait to {PORTRAIT_OUT}")
+        return f"Portrait saved to {PORTRAIT_OUT}", SkillResult.SUCCESS
 
     def cancel(self):
-        return "Selfie cannot be cancelled."
+        return "Portrait cannot be cancelled."
