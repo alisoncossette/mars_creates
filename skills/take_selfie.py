@@ -1,66 +1,50 @@
 #!/usr/bin/env python3
-"""take_selfie — swing the arm to a selfie pose and grab the wrist (arm) camera.
+"""take_selfie — grab a selfie from the arm's wrist camera at its CURRENT pose.
 
-Matches the real on-robot arm-skill convention (from innate-os/skills/set_arm_joints.py):
-  from brain_client.skill_types import Interface, InterfaceType, Skill, SkillResult
-  manipulation = Interface(InterfaceType.MANIPULATION)  # class attr
-  self.manipulation.move_to_joint_positions([j1..j5, gripper], duration, blocking)  # RADIANS
+The operator poses the arm once at the best selfie angle (torque holds it), so this skill does
+NOT move the arm — it just captures the wrist (arm) camera and saves it for publish_interview.
+Uses the proper RobotState API (same wrist image record_position uses), so no ROS/serial access.
 
-Deploy: ~/skills/take_selfie.py (auto-discovered as local/take_selfie). Reuses your
-~/mars_camera_feed.py to grab the arm camera (no in-process rclpy clash).
-
-CALIBRATE SELFIE_POSE on the robot: teleop the arm to a good selfie angle
-(robohacks26/manipulation/scripts/teleop_arm.py), read the joint radians, paste them below.
+Deploy: ~/skills/take_selfie.py (auto-discovered as local/take_selfie).
 """
 from __future__ import annotations
 
-import os
-import subprocess
+import base64
 
-from brain_client.skill_types import Interface, InterfaceType, Skill, SkillResult
+from brain_client.skill_types import RobotState, RobotStateType, Skill, SkillResult
 
-CAM_SCRIPT = os.path.expanduser("~/mars_camera_feed.py")
-ARM_CAM_TOPIC = "/mars/arm/image_raw/compressed"
 SELFIE_OUT = "/tmp/mars_selfie.jpg"
-
-# [base, shoulder, elbow, wrist_pitch, wrist_rotate, gripper] in RADIANS.
-# PLACEHOLDER — calibrate via teleop. Limits: j1 +-3.14, j2 -1.57..1.22, j3/j4/j5 +-1.57, gripper 0..0.85.
-SELFIE_POSE = [0.0, -0.6, 1.2, -0.8, 0.0, 0.3]
 
 
 class TakeSelfie(Skill):
-    """Pose the arm like a selfie stick and snap the arm camera."""
+    """Snap a selfie from the arm's wrist camera (current pose) and save it for publishing."""
 
-    manipulation = Interface(InterfaceType.MANIPULATION)
+    image = RobotState(RobotStateType.LAST_WRIST_CAMERA_IMAGE_B64)
 
     def __init__(self, logger):
         super().__init__(logger)
 
     @property
-    def name(self) -> str:
+    def name(self):
         return "take_selfie"
 
-    def guidelines(self) -> str:
+    def guidelines(self):
         return (
-            "Pose the arm like a selfie stick and take a photo with the arm's camera. Use right "
-            "before publishing, once the guest agreed to a selfie. Saves the photo to "
-            f"{SELFIE_OUT} — pass that as image_path to publish_interview."
+            "Take a selfie with the arm's wrist camera from its current pose (the arm is already "
+            f"posed for selfies). Saves the photo to {SELFIE_OUT} — call this right before "
+            "publish_interview and pass that path as image_path. Use after the guest said yes."
         )
 
-    def execute(self, duration: int = 3):
+    def execute(self):
+        if not self.image:
+            return "No wrist camera image available yet.", SkillResult.FAILURE
         try:
-            ok = self.manipulation.move_to_joint_positions(SELFIE_POSE, duration=duration, blocking=True)
-            if ok is False:
-                self.logger.warning("[take_selfie] arm move failed; shooting from current pose")
-            subprocess.run(
-                ["python3", CAM_SCRIPT, "--once", "--topic", ARM_CAM_TOPIC, "--out", SELFIE_OUT],
-                timeout=15, check=False,
-            )
-            if os.path.exists(SELFIE_OUT):
-                return f"Selfie saved to {SELFIE_OUT}", SkillResult.SUCCESS
-            return "Selfie capture failed (no frame from arm camera).", SkillResult.FAILURE
+            with open(SELFIE_OUT, "wb") as f:
+                f.write(base64.b64decode(self.image))
         except Exception as e:
-            return f"Selfie failed: {e}", SkillResult.FAILURE
+            return f"Selfie save failed: {e}", SkillResult.FAILURE
+        self.logger.info(f"[take_selfie] saved {SELFIE_OUT}")
+        return f"Selfie saved to {SELFIE_OUT}", SkillResult.SUCCESS
 
-    def cancel(self) -> str:
-        return "Selfie cannot be cancelled once the arm starts posing."
+    def cancel(self):
+        return "Selfie cannot be cancelled."
