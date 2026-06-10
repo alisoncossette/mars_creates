@@ -11,7 +11,8 @@ from dataclasses import dataclass, field
 
 try:  # optional — mock mode runs with stdlib only
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv()  # .env in CWD (off-robot dev)
+    load_dotenv(os.path.expanduser("~/mars_lib/.env"), override=False)  # on-robot deploy location
 except ImportError:
     pass
 
