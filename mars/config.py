@@ -66,7 +66,7 @@ class Settings:
         if h.strip()
     ])
     debut_note: str = os.getenv(
-        "MARS_DEBUT_NOTE", "🤖 My very first post — shot and posted all by myself. (Yes, it's a selfie.)"
+        "MARS_DEBUT_NOTE", "🤖 My very first post — I took this portrait and posted it all by myself!"
     )
 
     @property
