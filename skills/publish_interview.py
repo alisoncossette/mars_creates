@@ -83,11 +83,19 @@ class PublishInterview(Skill):
         if image_path and os.path.exists(image_path):
             with open(image_path, "rb") as f:
                 return f.read()
-        out = "/tmp/mars_publish.jpg"
+        # fallback: grab directly from the OAK camera (/dev/video5), bypassing ROS/calibration
         try:
-            subprocess.run(["python3", CAM_SCRIPT, "--once", "--topic", MAIN_CAM_TOPIC, "--out", out],
-                           timeout=15, check=False)
-            if os.path.exists(out):
+            import cv2
+            cap = cv2.VideoCapture(5)
+            for _ in range(8):
+                cap.read()
+            ok, frame = cap.read()
+            cap.release()
+            if ok and frame is not None:
+                left = frame[:, : frame.shape[1] // 2]
+                portrait = cv2.rotate(left, cv2.ROTATE_90_CLOCKWISE)
+                out = "/tmp/mars_publish.jpg"
+                cv2.imwrite(out, portrait)
                 with open(out, "rb") as f:
                     return f.read()
         except Exception as e:
