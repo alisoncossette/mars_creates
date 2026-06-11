@@ -1,5 +1,5 @@
 """Content Creator — Mars roves an event, takes a consented portrait of each person, and posts
-it (tagging them + what they're working on) to the gallery (Akamai) and X.
+it (tagging them + what they're working on) to X.
 
 Deploy: /home/jetson1/innate-os/agents/content_creator.py (the dir the brain scans).
 Needs skills local/take_selfie + local/publish_interview and the mars lib in ~/mars_lib.

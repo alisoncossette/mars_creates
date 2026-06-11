@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""publish_interview — Innate integration skill (posts a photo + text to gallery + X).
+"""publish_interview — Innate integration skill (posts to X).
 
 Matches the real on-robot convention (innate-os/skills/send_email.py, send_picture_via_email.py):
   from brain_client.skill_types import Skill, SkillResult
@@ -12,7 +12,7 @@ Grabs a frame if no image_path is given (falls back to the main camera via ~/mar
 DEPLOY:
   • drop in ~/skills/  (auto-discovered as local/publish_interview)
   • copy the mars/ lib to ~/mars_lib/  (this file adds it to sys.path)
-  • keys via env / .env: MAGNIFIC_API_KEY, ANTHROPIC_API_KEY, X_*, AKAMAI_GALLERY_*
+  • keys via env / .env: MAGNIFIC_API_KEY, ANTHROPIC_API_KEY, X_*
     (anything missing -> that step degrades to mock, skill still succeeds)
 """
 from __future__ import annotations
@@ -43,7 +43,7 @@ class PublishInterview(Skill):
 
     def guidelines(self):
         return (
-            "Post to X (and the gallery if set up). Provide `working_on` (one line about what the "
+            "Post to X. Provide `working_on` (one line about what the "
             "guest is working on) and `handle` (their @, to tag them). It generates an image from "
             "`working_on` with Magnific, writes a caption, and posts + tags them. ONLY call this "
             "after the guest agreed out loud to be posted."

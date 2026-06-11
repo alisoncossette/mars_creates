@@ -34,21 +34,6 @@ class Settings:
     magnific_base_url: str = os.getenv("MAGNIFIC_BASE_URL", "https://api.magnific.com")
     magnific_scale: int = int(os.getenv("MARS_MAGNIFIC_SCALE", "2"))
 
-    # Akamai Cloud = Linode Object Storage (S3-compatible), fronted by Akamai CDN
-    s3_endpoint: str = os.getenv("LINODE_S3_ENDPOINT", "")        # e.g. https://us-east-1.linodeobjects.com
-    s3_region: str = os.getenv("LINODE_S3_REGION", "us-east-1")
-    s3_bucket: str = os.getenv("LINODE_S3_BUCKET", "")
-    s3_key: str = os.getenv("LINODE_S3_ACCESS_KEY", "")
-    s3_secret: str = os.getenv("LINODE_S3_SECRET_KEY", "")
-    cdn_base_url: str = os.getenv("AKAMAI_CDN_BASE_URL", "")      # optional custom Akamai domain
-    rtmp_ingest_url: str = os.getenv("AKAMAI_RTMP_INGEST_URL", "")
-    stream_key: str = os.getenv("AKAMAI_STREAM_KEY", "")
-
-    @property
-    def s3_configured(self) -> bool:
-        return all([self.s3_endpoint, self.s3_bucket, self.s3_key, self.s3_secret])
-
-    publish_gallery: bool = _bool("MARS_PUBLISH_GALLERY", True)
     publish_x: bool = _bool("MARS_PUBLISH_X", True)
     x_keys: dict = field(default_factory=lambda: {
         "api_key": os.getenv("X_API_KEY", ""),
@@ -57,12 +42,11 @@ class Settings:
         "access_secret": os.getenv("X_ACCESS_SECRET", ""),
     })
 
-    live: bool = _bool("MARS_LIVE", False)
     max_questions: int = int(os.getenv("MARS_MAX_QUESTIONS", "4"))
 
     # Tags on EVERY post (host + sponsors) and the debut framing.
     always_tag: list[str] = field(default_factory=lambda: [
-        h.strip() for h in os.getenv("MARS_ALWAYS_TAG", "@hackersquadsf,@Akamai,@Magnific_AI").split(",")
+        h.strip() for h in os.getenv("MARS_ALWAYS_TAG", "@hackersquadsf,@Magnific_AI").split(",")
         if h.strip()
     ])
     debut_note: str = os.getenv(

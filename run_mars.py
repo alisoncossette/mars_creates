@@ -16,7 +16,6 @@ import logging
 from mars.agent import MarsAgent
 from mars.config import EventContext, Settings
 from mars.interview import InterviewBrain
-from mars.media import LiveStream
 from mars.publish import build_publishers
 from mars.robot import MarsClient
 from mars.voice import Voice
@@ -41,17 +40,15 @@ def main() -> None:
     voice = Voice(robot, settings)
     brain = InterviewBrain(settings, event)
     publishers = build_publishers(settings)
-    live = LiveStream(settings)
 
     print("=" * 60)
     print("  MARS — roving robot interviewer")
     print(f"  llm={'real' if not settings.mock_llm else 'MOCK'}  "
           f"voice={'real' if not (voice.mock_tts or voice.mock_stt) else 'MOCK'}  "
-          f"live={'on' if settings.live else 'off'}  "
           f"targets={[p.name for p in publishers]}")
     print("=" * 60)
 
-    agent = MarsAgent(settings, event, robot, voice, brain, publishers, live)
+    agent = MarsAgent(settings, event, robot, voice, brain, publishers)
     agent.run(max_rounds=None if args.rounds == 0 else args.rounds)
 
 

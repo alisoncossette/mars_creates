@@ -39,7 +39,7 @@ class MarsInterviewer(Agent):
             "innate-os/wave",                  # greet
             "innate-os/head_emotion",          # be expressive
             "local/capture_image",             # grab a hero frame
-            "local/publish_interview",         # Magnific + caption + post to gallery & X
+            "local/publish_interview",         # Magnific + caption + post to X
         ]
 
     def get_prompt(self) -> str:
@@ -98,7 +98,7 @@ THE LOOP — repeat this
    • Call local/capture_image to grab a nice photo of them.
    • Call local/publish_interview, passing the single most postable thing they said as
      `quote`, and a short `summary` of the chat. The skill handles enhancing the photo,
-     writing the caption, and posting to the gallery and X.
+     writing the caption, and posting to X.
    • Tell them where to find it: "You're up on the wall! Thanks so much."
 
 6. Wave goodbye and go back to step 1 to find the next person.

@@ -3,9 +3,8 @@
 
     python test_post.py selfie.jpg --handle alison --working-on "a knowledge graph"
 
-With keys in .env it really: enhances (Magnific) -> captions (Claude) -> pushes to Akamai/Linode
--> posts to X. Without a given key, that step mocks gracefully so you can still see the flow.
-This proves the entire publishing half before Mars's camera/arm are ever involved.
+With keys in .env it really: generates an image (Magnific) -> captions (Claude) -> posts to X.
+Without a given key, that step mocks gracefully so you can still see the flow.
 """
 from __future__ import annotations
 
@@ -43,7 +42,6 @@ def main() -> None:
     print(
         f"[test] magnific={'REAL' if settings.magnific_api_key else 'mock'}  "
         f"caption={'claude' if not settings.mock_llm else 'mock'}  "
-        f"gallery={'AKAMAI' if settings.s3_configured else 'mock(./out)'}  "
         f"x={'REAL' if all(settings.x_keys.values()) else 'mock'}"
     )
 

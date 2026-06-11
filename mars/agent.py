@@ -2,7 +2,7 @@
 
 Kickoff: learn the event (ask the operator if unknown).
 Each round: roam -> find someone -> consent-to-record -> interview (event/sponsor-aware) ->
-record both cams + audio -> consent-to-publish -> Magnific + caption -> post (gallery + X).
+record both cams + audio -> consent-to-publish -> Magnific + caption -> post to X.
 """
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ import logging
 from .config import EventContext, Settings
 from .content import compose_post
 from .interview import InterviewBrain, consent_to_publish, consent_to_record
-from .media import LiveStream
 from .publish import Publisher
 from .robot import MarsClient
 from .voice import Voice
@@ -28,7 +27,6 @@ class MarsAgent:
         voice: Voice,
         brain: InterviewBrain,
         publishers: list[Publisher],
-        live: LiveStream,
     ):
         self.s = settings
         self.event = event
@@ -36,7 +34,6 @@ class MarsAgent:
         self.voice = voice
         self.brain = brain
         self.publishers = publishers
-        self.live = live
 
     def run(self, max_rounds: int | None = None) -> None:
         self.robot.connect()
@@ -71,19 +68,17 @@ class MarsAgent:
             self.voice.say("No worries — enjoy the event!")
             return
 
-        # 2) record (both cams + audio) + optional live stream, while interviewing
-        self.live.start()
+        # 2) record (both cams + audio) while interviewing
         handle = self.robot.start_av_recording()
         transcript = self.brain.run_interview(self.voice)
         self.robot.stop_av_recording(handle)
-        self.live.stop()
 
         # 3) consent to publish (verify before the irreversible action)
         if not consent_to_publish(self.voice, self.s):
             self.voice.say("Totally fine — I won't post it. Thanks!")
             return
 
-        # 4) create (Magnific + caption + quote) and publish (gallery + X)
+        # 4) create (Magnific + caption + quote) and publish to X
         hero = self.robot.capture_frame(cam=0)
         post = compose_post(transcript, hero, self.event, self.s)
         for pub in self.publishers:
